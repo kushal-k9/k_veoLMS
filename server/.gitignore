@@ -1,0 +1,28 @@
+# Dependencies
+node_modules/
+
+# Environment (env) / secrets — never commit
+.env
+.env.*
+!.env.example
+
+# Logs
+logs/
+*.log
+npm-debug.log*
+storage/logs/
+
+# Uploaded files (user content)
+storage/uploads/
+
+# OS / editor
+.DS_Store
+Thumbs.db
+*.swp
+.idea/
+.vscode/
+
+# Build / coverage
+dist/
+coverage/
+*.tsbuildinfo
