@@ -22,7 +22,21 @@ const schema = z.object({
   PORT: z.coerce.number().int().positive().default(4000),
   TRUST_PROXY: bool(false),
 
-  CLIENT_ORIGIN: z.string().url(),
+  // One origin, or a comma-separated list (e.g. prod site + localhost).
+  CLIENT_ORIGIN: z
+    .string()
+    .min(1, "CLIENT_ORIGIN is required")
+    .refine(
+      (v) =>
+        v.split(",").every((s) => {
+          try {
+            return Boolean(new URL(s.trim()));
+          } catch {
+            return false;
+          }
+        }),
+      "CLIENT_ORIGIN must be a URL or comma-separated list of URLs"
+    ),
 
   MONGODB_URI: z.string().min(1, "MONGODB_URI is required"),
 

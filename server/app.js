@@ -42,14 +42,22 @@ app.post(
 // --- Security headers ---
 app.use(helmetMiddleware());
 
-// --- CORS: strict allowlist of the frontend origin, with credentials. ---
-const allowedOrigins = [env.CLIENT_ORIGIN];
+// --- CORS: strict allowlist of the frontend origin(s), with credentials. ---
+// CLIENT_ORIGIN may be a comma-separated list; trailing slashes are normalized
+// away so a config typo (e.g. "https://site.app/") doesn't silently break CORS.
+const stripTrailingSlash = (s) => s.replace(/\/+$/, "");
+const allowedOrigins = env.CLIENT_ORIGIN.split(",")
+  .map((o) => stripTrailingSlash(o.trim()))
+  .filter(Boolean);
 app.use(
   cors({
     origin(origin, cb) {
       // Allow same-origin / server-to-server (no Origin header) and the allowlist.
-      if (!origin || allowedOrigins.includes(origin)) return cb(null, true);
-      return cb(new Error(`Origin ${origin} not allowed by CORS`));
+      if (!origin) return cb(null, true);
+      if (allowedOrigins.includes(stripTrailingSlash(origin))) return cb(null, true);
+      // Disallowed: respond without CORS headers (browser blocks) instead of
+      // throwing a 500 into the error handler.
+      return cb(null, false);
     },
     credentials: true,
     methods: ["GET", "POST", "PATCH", "PUT", "DELETE", "OPTIONS"],
