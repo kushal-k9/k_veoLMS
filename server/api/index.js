@@ -1,9 +1,8 @@
 "use strict";
 
-// Vercel serverless catch-all. Filename `[...path].js` makes this function
-// handle every /api/* request natively (no rewrites needed). It reuses the
-// Express app from app.js and keeps the Mongo connection warm across
-// invocations (cached on the module scope).
+// Vercel serverless entry. A vercel.json rewrite sends every path (any depth)
+// here, so this single function serves the whole Express app. The Mongo
+// connection is cached on module scope to stay warm across invocations.
 const app = require("../app");
 const { connectDB } = require("../config/db");
 
