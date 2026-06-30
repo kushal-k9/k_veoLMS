@@ -51,14 +51,7 @@ const allowedOrigins = env.CLIENT_ORIGIN.split(",")
   .filter(Boolean);
 app.use(
   cors({
-    origin(origin, cb) {
-      // Allow same-origin / server-to-server (no Origin header) and the allowlist.
-      if (!origin) return cb(null, true);
-      if (allowedOrigins.includes(stripTrailingSlash(origin))) return cb(null, true);
-      // Disallowed: respond without CORS headers (browser blocks) instead of
-      // throwing a 500 into the error handler.
-      return cb(null, false);
-    },
+  origin:  "https://veolms.netlify.app" || env.CLIENT_ORIGIN,
     credentials: true,
     methods: ["GET", "POST", "PATCH", "PUT", "DELETE", "OPTIONS"],
     allowedHeaders: ["Content-Type", "Authorization", "x-csrf-token"],
