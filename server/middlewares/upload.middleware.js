@@ -6,6 +6,7 @@
  * - Filenames randomized (never trust the client's name).
  * - MIME type + extension whitelisted; size capped.
  */
+const os = require("os");
 const path = require("path");
 const fs = require("fs");
 const crypto = require("crypto");
@@ -13,7 +14,13 @@ const multer = require("multer");
 const env = require("../config/env");
 const ApiError = require("../utils/ApiError");
 
-const UPLOAD_DIR = path.resolve(__dirname, "..", "storage", "uploads");
+// Serverless (Vercel) only allows writes under /tmp, and that storage is
+// ephemeral per-invocation — uploads won't persist there, so use cloud storage
+// (S3/Cloudinary) for real durability. We still point at /tmp so the app boots.
+const isServerless = Boolean(process.env.VERCEL);
+const UPLOAD_DIR = isServerless
+  ? path.join(os.tmpdir(), "uploads")
+  : path.resolve(__dirname, "..", "storage", "uploads");
 fs.mkdirSync(UPLOAD_DIR, { recursive: true });
 
 const ALLOWED = new Map([

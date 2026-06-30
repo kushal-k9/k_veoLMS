@@ -11,8 +11,14 @@ const fs = require("fs");
 const winston = require("winston");
 const env = require("../config/env");
 
+// Serverless platforms (Vercel) have a read-only filesystem except /tmp, so
+// file logging is impossible there — log only to the console, which the
+// platform captures. A long-running server still writes rotating log files.
+const isServerless = Boolean(process.env.VERCEL);
+const fileLogging = env.isProd && !isServerless;
+
 const logDir = path.resolve(__dirname, "..", "storage", "logs");
-fs.mkdirSync(logDir, { recursive: true });
+if (fileLogging) fs.mkdirSync(logDir, { recursive: true });
 
 const devFormat = winston.format.combine(
   winston.format.colorize(),
@@ -36,7 +42,7 @@ const logger = winston.createLogger({
   exitOnError: false,
 });
 
-if (env.isProd) {
+if (fileLogging) {
   logger.add(
     new winston.transports.File({
       filename: path.join(logDir, "error.log"),
@@ -55,18 +61,20 @@ if (env.isProd) {
 }
 
 // Separate audit trail for auth events (login, logout, refresh, lockouts…).
+// Writes to a file when possible; otherwise (serverless/dev) to the console.
 const audit = winston.createLogger({
   level: "info",
   format: prodFormat,
-  transports: [
-    new winston.transports.File({
-      filename: path.join(logDir, "audit.log"),
-      maxsize: 5 * 1024 * 1024,
-      maxFiles: 10,
-    }),
-  ],
+  transports: fileLogging
+    ? [
+        new winston.transports.File({
+          filename: path.join(logDir, "audit.log"),
+          maxsize: 5 * 1024 * 1024,
+          maxFiles: 10,
+        }),
+      ]
+    : [new winston.transports.Console({ format: env.isDev ? devFormat : prodFormat })],
 });
-if (env.isDev) audit.add(new winston.transports.Console({ format: devFormat }));
 
 /**
  * Record a structured audit event.
