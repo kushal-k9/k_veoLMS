@@ -29,8 +29,12 @@ function applyDnsFallback() {
 mongoose.set("strictQuery", true);
 mongoose.set("sanitizeFilter", true); // strips query operators from filter objects
 
-const MAX_RETRIES = 5;
-const RETRY_DELAY_MS = 5000;
+// Serverless (Vercel) functions have a short wall-clock budget, so fail fast
+// there instead of burning the whole timeout on retries. A long-running server
+// keeps the resilient retry loop.
+const isServerless = Boolean(process.env.VERCEL);
+const MAX_RETRIES = isServerless ? 2 : 5;
+const RETRY_DELAY_MS = isServerless ? 1000 : 5000;
 
 async function connectWithRetry(attempt = 1) {
   try {
@@ -53,8 +57,12 @@ async function connectWithRetry(attempt = 1) {
       return connectWithRetry(attempt + 1);
     }
     if (attempt >= MAX_RETRIES) {
-      logger.error("Exhausted MongoDB connection retries. Exiting.");
-      process.exit(1);
+      logger.error("Exhausted MongoDB connection retries.");
+      // Throw instead of process.exit so callers can handle it. In a
+      // long-running server, app.js's start() catches this and exits; in a
+      // serverless function it surfaces as a readable 500 instead of an
+      // opaque FUNCTION_INVOCATION_FAILED crash.
+      throw err;
     }
     await new Promise((r) => setTimeout(r, RETRY_DELAY_MS));
     return connectWithRetry(attempt + 1);
